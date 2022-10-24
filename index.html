@@ -1,0 +1,481 @@
+<!--
+Name: Brandon Miller
+Class Name: CPSC 332
+Assignment Name: Homework 4 - 
+Last Modified Date 10/7/22
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Quiz App</title>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            font-family: Gotham Rounded;
+        }
+
+        :root {
+            --hue-neutral: 260;
+            --hue-wrong: 0;
+            --hue-correct: 145;
+        }
+
+        body {
+            --hue: var(--hue-neutral);
+            padding: 0;
+            margin: 0;
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+            justify-content: center;
+            align-items: center;
+            background-color: hsl(var(--hue), 100%, 20%);
+        }
+
+        body.correct {
+            --hue: var(--hue-correct);
+        }
+
+        body.wrong {
+            --hue: var(--hue-wrong);
+        }
+
+        .information-container {  
+            position: absolute;
+            top: 200px;  
+            width: 800px;
+            max-width: 80%;
+            background-color: orange;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 0 10px 2px;
+        }
+
+        .container {
+            
+            width: 800px;
+            max-width: 80%;
+            background-color: orange;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 0 10px 2px;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(2, auto);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .btn {
+            --hue: var(--hue-neutral);
+            border: 1px solid hsl(var(--hue), 100%, 30%);
+            background-color: hsl(var(--hue), 100%, 50%);
+            border-radius: 5px;
+            padding: 5px 10px;
+            color: white;
+            outline: none;
+        }
+
+        .btn:hover {
+            border-color: black;
+        }
+
+        .btn.correct {
+            --hue: var(--hue-correct);
+            color: black;
+        }
+
+        .btn.wrong {
+            --hue: var(--hue-wrong);
+        }
+
+        .start-btn,
+        .next-btn,
+        .back-btn {
+            font-size: 1.5rem;
+            font-weight: bold;
+            padding: 10px 20px;
+            margin: 0 10px;
+        }
+
+        .options {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .time {
+            display: flex;
+            justify-content: center;
+            align-items: center;      
+        }
+
+        .color {
+            background-color: red;
+        }
+
+
+        .hide {
+            display: none;
+        }
+
+    </style>
+    <script>
+
+        // Add an event listener for the DOMContentLoaded event
+        window.addEventListener("DOMContentLoaded", domLoaded);
+
+        function domLoaded() {
+            const startButton = document.getElementById('start-btn')
+            const backButton = document.getElementById('back-btn')
+            const nextButton = document.getElementById('next-btn')
+            const questionContainerElement = document.getElementById('question-container')
+            const optionsContainerElement = document.getElementById('options-container')
+            const questionElement = document.getElementById('question')
+            const informationContainerElement = document.getElementById('inf-container')
+            const informationElement = document.getElementById('info')
+            const answerButtonsElement = document.getElementById('answer-buttons')
+            const timerContainer = document.getElementById('time')
+            const m = document.getElementById('min')
+            const s = document.getElementById('sec')
+
+            let shuffledQuestions, currentQuestionIndex, correctQuestions, correctQuestionIndex
+
+            var shuffle = document.getElementById('shuffle')
+            var timer = document.getElementById('timed')
+            var rm = document.getElementById('remove')
+
+            let time = false
+            var min = 0
+            var ms = 0
+            var sec = 0
+            //using the domLoaded function because the buttons need to be rendered before we can
+            //add an event listener
+            optionsContainerElement.classList.remove('hide')
+            startButton.addEventListener('click', startGame)
+            nextButton.addEventListener('click', () => {
+                currentQuestionIndex++
+                setNextQuestion()
+            })
+            backButton.addEventListener('click', () => {
+                currentQuestionIndex--
+                setPrevQuestion()
+            })
+
+            function startGame() {
+                clearTime()
+                startButton.classList.add('hide')
+                optionsContainerElement.classList.add('hide')
+                if (shuffle.checked == true)
+                {
+                    shuffledQuestions = questions.sort(() => Math.random() - .5)
+                }
+                else
+                {
+                    shuffledQuestions = questions
+                }
+                currentQuestionIndex = 0
+                correctQuestionIndex = 0
+                questionContainerElement.classList.remove('hide')
+                setNextQuestion()
+                if (timer.checked == true)
+                {
+                    timerContainer.classList.remove('hide')
+                    time = true
+                    startTimer()
+                }
+            }
+
+            function setPrevQuestion() {
+                resetState()
+                showQuestion(shuffledQuestions[currentQuestionIndex])
+            }
+
+            function setNextQuestion() {
+                resetState()
+                showQuestion(shuffledQuestions[currentQuestionIndex])
+            }
+
+            function showQuestion(question) {           
+                questionElement.innerText = question.question 
+                informationElement.innerText = question.information   
+                question.answers.forEach(answer => {
+                    const button = document.createElement('button')
+                    button.innerText = answer.text
+                    button.classList.add('btn')
+                    if (answer.correct) {
+                        button.dataset.correct = answer.correct
+                    }                 
+                    button.addEventListener('click', selectAnswer)
+                    answerButtonsElement.appendChild(button)
+                    
+                })
+            }
+
+            function resetState() {
+                clearStatusClass(document.body)
+                backButton.classList.add('hide')
+                nextButton.classList.add('hide')
+                while (answerButtonsElement.firstChild) {
+                    answerButtonsElement.removeChild(answerButtonsElement.firstChild)
+                }
+            }
+
+            function selectAnswer(e) {
+                const selectedButton = e.target
+                const correct = selectedButton.dataset.correct
+                setStatusClass(document.body, correct)
+                Array.from(answerButtonsElement.children).forEach(button => {
+                    setStatusClass(button, button.dataset.correct)
+                })
+                if (currentQuestionIndex > 0) {
+                    backButton.classList.remove('hide')
+                }
+                if (shuffledQuestions.length > currentQuestionIndex + 1) {
+                    nextButton.classList.remove('hide')
+                }
+                else {
+                    startButton.innerText = 'Restart'
+                    time = false
+                    startButton.classList.remove('hide')
+                    backButton.classList.add('hide')
+                }
+            }
+            
+
+            function setStatusClass(element, correct) {
+                clearStatusClass(element)
+                if (correct) {
+                    element.classList.add('correct')
+                      
+                    if (rm.checked == true)
+                    {
+                        
+                    }
+
+                } else {
+                    element.classList.add('wrong')
+                }
+            }
+
+            function clearStatusClass(element) {
+                element.classList.remove('correct')
+                element.classList.remove('wrong')
+            }
+
+            function startTimer() {
+                
+                if (time)
+                {
+                    ms++
+                    if (ms == 100) {
+                        sec++;
+                        ms = 0;
+                    }
+            
+                    if (sec == 60) {
+                        min++;
+                        sec = 0;
+                    }
+
+                    if (sec % 2 == 0)
+                    {
+                        m.classList.add('color')
+                        s.classList.add('color')
+                    }
+                    else
+                    {
+                        m.classList.remove('color')
+                        s.classList.remove('color')
+                    }
+
+                    let minString = min;
+                    let secString = sec;
+            
+                    if (min < 10) {
+                        minString = "0" + minString;
+                    }
+            
+                    if (sec < 10) {
+                        secString = "0" + secString;
+                    }
+
+                    document.getElementById('min').innerHTML = minString;
+                    document.getElementById('sec').innerHTML = secString;       
+                    setTimeout(startTimer, 8)
+                }
+            }
+
+            function clearTime() {
+                min = 0;
+                sec = 0;
+                ms = 0;
+            }
+
+            const questions = [
+                {
+                    question: 'Which vegetable was originally used to make jack-o-lanterns?',
+                    information: 'Jack-o-lanterns originated in Ireland and Scotland and were made out of turnips and other root vegetables.',
+                    answers: [
+                        { text: 'Spinach', correct: false },
+                        { text: 'Turnips', correct: true },
+                        { text: 'Peppers', correct: false },
+                        { text: 'Celery', correct: false},
+                    ]
+                },
+                {
+                    question: 'Which animals are most commonly associated with witches?',
+                    information: 'Some believe black cats contain a spirit and do a witch\'s bidding.',
+                    answers: [
+                        { text: 'Black cats', correct: true },
+                        { text: 'Red pandas', correct: false },
+                        { text: 'Green frogs', correct: false },
+                        { text: 'Yellow dogs', correct: false },
+                    ]
+                },
+                {
+                    question: 'What day is Halloween celebrated on?',
+                    information: 'Halloween is celebrated on October 31st.',
+                    answers: [
+                        { text: 'October 30', correct: false },
+                        { text: 'November 1', correct: false },
+                        { text: 'March 31', correct: false },
+                        { text: 'October 31', correct: true },
+                    ]
+                },
+                {
+                    question: 'Spiders have eight legs, but what other body part do they usually have eight of?',
+                    information: 'Most, but not all, spiders have eight eyes.',
+                    answers: [
+                        { text: 'mouths', correct: false },
+                        { text: 'hands', correct: false },
+                        { text: 'feet', correct: false },
+                        { text: 'eyes', correct: true },
+                    ]
+                },
+                {
+                    question: 'What sort of supernatural being is Dracula?',
+                    information: 'Some claim the character Dracula is based on a real historical person.',
+                    answers: [
+                        { text: 'Goblin', correct: false },
+                        { text: 'Ghost', correct: false },
+                        { text: 'Banshee', correct: false },
+                        { text: 'Vampire', correct: true },
+                    ]
+                },
+                {
+                    question: 'Day of the Dead, or Dia de los Muertos, is a holiday celebrated near Halloween in which country?',
+                    information: 'Day of the Dead has roots Maya, Aztec, and other Mesoamerican cultures.',
+                    answers: [
+                        { text: 'Finland', correct: false },
+                        { text: 'Mexico', correct: true },
+                        { text: 'Portugal', correct: false },
+                        { text: 'Ireland', correct: false },
+                    ]
+                },
+                {
+                    question: 'If you saw a mummy chasing you on Halloween, which country would you guess it had come from?',
+                    information: 'Many think of ancient Egypt and the pyramids when they think of mummies.',
+                    answers: [
+                        { text: 'China', correct: false },
+                        { text: 'Great Britain', correct: false },
+                        { text: 'Transylvania', correct: false },
+                        { text: 'Egypt', correct: true },
+                    ]
+                },
+                {
+                    question: 'The corpse flower gets its name from its:',
+                    information: 'The corpse flower, which smells like rotting meat, grows in Indonesia.',
+                    answers: [
+                        { text: 'Smell', correct: true },
+                        { text: 'Texture', correct: false },
+                        { text: 'Location', correct: false },
+                        { text: 'Appearance', correct: false },       
+                    ]
+                },
+                {
+                    question: 'What is a pumpkin?',
+                    information: 'Although many think it\'s a vegetable, the pumpkin is actually a fruit.',
+                    answers: [
+                        { text: 'Fruit', correct: true },
+                        { text: 'Animal', correct: false },
+                        { text: 'Vegetable', correct: false },
+                        { text: 'Mineral', correct: false },     
+                    ]
+                },
+                {
+                    question: 'Which of these words is another word for “ghost”?',
+                    information: 'Phantom, spirit, and shade are words meaning "ghost".',
+                    answers: [
+                        { text: 'Gnome', correct: false },
+                        { text: 'Phoenix', correct: false },
+                        { text: 'Phantom', correct: true },
+                        { text: 'Sprite', correct: false },   
+                    ]
+                },
+                
+            ]
+        }
+    </script>
+</head>
+
+<body>
+    <div class="information-container"> 
+        <div id="inf-container">
+            <div id="info">Information</div>
+        </div>
+    </div>
+    <div class="container">
+        <div id="question-container" class="hide">
+            <div id="question">Question</div>
+            <div id="answer-buttons" class="btn-grid">
+                <button class="btn">Answer 1</button>
+                <button class="btn">Answer 2</button>
+                <button class="btn">Answer 3</button>
+                <button class="btn">Answer 4</button>
+            </div>
+        </div>
+        <div class="options">
+            <div id="options-container" class="hide">
+                <h1>Halloween Quiz</h1>
+                <h2>Options</h2>
+                <input type="checkbox" id="shuffle" name="shuffleCards" value="Shuffle" checked>
+                <label for="shuffle"> Shuffle Cards </label> <br>
+
+                <input type="checkbox" id="timed" name="timedSession" value="Timed">
+                <label for="timed"> Timed Session </label> <br>
+
+                <input type="checkbox" id="remove" name="removeCards" value="Remove">
+                <label for="remove"> Remove Correct from Deck </label> <br>
+            </div>
+        </div>
+        <div id="time" class="time hide">
+            <p id="min" class="color">00</p>
+            <p>M</p>
+            <p id="sec" class="color">00</p>
+            <p>S</p>
+        </div>
+        <div class="controls">
+            <button id="start-btn" class="start-btn btn">Start</button>
+            <button id="back-btn" class="back-btn btn hide">Back</button>
+            <button id="next-btn" class="next-btn btn hide">Next</button>
+        </div>  
+    </div>  
+</body>
+</html>
